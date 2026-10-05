@@ -218,7 +218,13 @@ async function delreq(id){
   if(t===null)return;
   if(t.trim().toUpperCase()!==r.no.toUpperCase())return alert('The number did not match. Nothing was deleted.');
   await loadDetail(id);const paths=r.attach.map(a=>a.path);
-  if(paths.length){const d=await sb.storage.from('attachments').remove(paths);if(d.error)throw new Error(d.error.message);if((d.data||[]).length!==paths.length)throw new Error('Some files could not be deleted, so nothing was deleted. Try again.')}
+  if(paths.length){
+    const d=await sb.storage.from('attachments').remove(paths);if(d.error)throw new Error(d.error.message);
+    if((d.data||[]).length!==paths.length){
+      const l=await sb.storage.from('attachments').list(id),left=(l.data||[]).filter(f=>paths.includes(id+'/'+f.name));
+      if(left.length)throw new Error('The files could not be deleted - the delete permission is probably missing. Run supabase_step_delete.sql in the Supabase SQL Editor, then try again. Nothing was deleted.');
+    }
+  }
   must(await sb.rpc('delete_request',{p_request_id:id}));
   openId=null;view='mine';await refresh(true);alert(r.no+' was deleted.');
 }
